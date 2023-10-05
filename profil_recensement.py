@@ -55,7 +55,7 @@ dict_taille_menage = {
     }
 }
 
-var_pertinentes_bool = False  # Réexporter la table initiale avec les variables pertinentes. Variables renommées.
+var_pertinentes_bool = True  # Réexporter la table initiale avec les variables pertinentes. Variables renommées.
 export_long = True  # Exporter la table renommée en format long avec sélection de géographie et de modalités.
 
 LIST_AGEGROUP_NAMES = pd.Series(['00_04', '05_09', '10_14', '15_19', '20_24', '25_29', '30_34', '35_39', '40_44',
@@ -72,6 +72,7 @@ def clean_full_table(var_pertinentes):
             "NOM_GÉO": "string"
         }
         )
+    #TODO : Extraire le QUébec seulement
     df = df.set_axis(varlists["varlist_rename"], axis=1)
     df.to_csv(
         f'C:/Projets_Python/Outils_Demo/inputs/full_profile_var_pertinentes_2021.csv',
@@ -89,6 +90,7 @@ def extract_data(input_df, varlist, geo):
     :param geo:
     :return:
     """
+
     df = input_df[varlist]
     df = df[df["GEO"] == geo].fillna(0)
     return df
@@ -144,10 +146,11 @@ if export_long:
         f'{paths["path_rmr_ar_sr_input"]}{paths["profil_varlist_pertinentes"]}',
         sep=";",
         dtype={
-            "NOM_GÉO": "string"
+            "GEO_CODE": "string"
         }
     )
     # Extraire les champs pertinents seulement.
+    a = pd.Series(full_df["GEO_CODE"].unique())
     df_popagesex_sr = extract_data(full_df, varlists["varlist_popagesex"], "Secteur de recensement")
     df_popagesex_sr = pop_age_sex_geo(df_popagesex_sr, "Secteur de recensement")
     df_popagesex_sr.to_csv(
