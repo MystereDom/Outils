@@ -4,22 +4,30 @@ import pandas as pd
 import numpy as np
 from long_to_wide import long_to_wide as ltw
 from extract_by_value import extract_by_value as ebv
+from profil_clean_and_rename_fields import clean_full_table as cft
 
-# PARAMS ########
+# ### PARAMS #################################################################################
+# dictionnaire des chemins d'accès
 paths = {
-    "path_rmr_ar_sr_input": f'C:/Projets_Python/Outils_Demo/inputs/',
-    "path_rmr_ar_sr_output": f'C:/Projets_Python/Outils_Demo/outputs/',
+    "path_rmr_ar_sr_input_folder": f'C:/Projets_Python/Outils_Demo/inputs/',
+    "path_rmr_ar_sr_output_folder": f'C:/Projets_Python/Outils_Demo/outputs/',
     "profil_rmr_ar_sr": f'98-401-X2021007_Francais_CSV_data.csv',
     "profil_varlist_pertinentes": f'full_profile_var_pertinentes_2021.csv'
 }
+# dictionnaire des listes de variables
 varlists = {
-    "varlist_full_pertinentes": [
-        "NIVEAU_GÉO", "NOM_GÉO", "ID_CARACTÉRISTIQUE", "NOM_CARACTÉRISTIQUE", "C1_CHIFFRE_TOTAL", "C2_CHIFFRE_HOMMES+",
-        "C3_CHIFFRE_FEMMES+", "C10_TAUX_TOTAL", "C11_TAUX_HOMMES+", "C12_TAUX_FEMMES+"
-    ],
-    "varlist_rename": [
-        "GEO", "GEO_CODE", "MODALITE_ID", "MODALITE_NOM", "TOTAL", "H", "F", "TAUX_TOTAL", "TAUX_H", "TAUX_F"
-    ],
+    "varlist_rename": {
+        "NIVEAU_GÉO": "TYPE_GEO",
+        "NOM_GÉO": "GEO_CODE",
+        "ID_CARACTÉRISTIQUE": "MODALITE_ID",
+        "NOM_CARACTÉRISTIQUE": "MODALITE_NOM",
+        "C1_CHIFFRE_TOTAL": "TOTAL",
+        "C2_CHIFFRE_HOMMES+": "H",
+        "C3_CHIFFRE_FEMMES+": "F",
+        "C10_TAUX_TOTAL": "TAUX_TOTAL",
+        "C11_TAUX_HOMMES+": "TAUX_H",
+        "C12_TAUX_FEMMES+": "TAUX_F"
+    },
     "varlist_popagesex": [
         "GEO", "GEO_CODE", "MODALITE_ID", "MODALITE_NOM", "H", "F"
     ],
@@ -33,8 +41,8 @@ id_var = {
 }
 # Faire une classe?
 dict_popagesex = {
-    "input_long": f'{paths["path_rmr_ar_sr_input"]}popagesex_2021_SR_long.csv',
-    "output_wide": f'{paths["path_rmr_ar_sr_output"]}popagesex_2021_SR_wide.csv',
+    "input_long": f'{paths["path_rmr_ar_sr_input_folder"]}popagesex_2021_SR_long.csv',
+    "output_wide": f'{paths["path_rmr_ar_sr_output_folder"]}popagesex_2021_SR_wide.csv',
     "pivot_vars": ['GEO_CODE', 'AGE'],
     "keep_vars": [],
     "dtype": {
@@ -45,8 +53,8 @@ dict_popagesex = {
     }
 }
 dict_taille_menage = {
-    "input_long": f'{paths["path_rmr_ar_sr_input"]}taille_meange_2021_SR_long.csv',
-    "output_wide": f'{paths["path_rmr_ar_sr_output"]}taille_menage_2021_SR_wide.csv',
+    "input_long": f'{paths["path_rmr_ar_sr_input_folder"]}taille_meange_2021_SR_long.csv',
+    "output_wide": f'{paths["path_rmr_ar_sr_output_folder"]}taille_menage_2021_SR_wide.csv',
     "pivot_vars": ['GEO_CODE', 'MODALITE_NOM'],
     "keep_vars": [],
     "dtype": {
@@ -55,32 +63,14 @@ dict_taille_menage = {
     }
 }
 
-var_pertinentes_bool = True  # Réexporter la table initiale avec les variables pertinentes. Variables renommées.
+clean_source_csv = True  # Réexporter fichier profil source avec les variables pertinentes et renommer.
 export_long = True  # Exporter la table renommée en format long avec sélection de géographie et de modalités.
 
 LIST_AGEGROUP_NAMES = pd.Series(['00_04', '05_09', '10_14', '15_19', '20_24', '25_29', '30_34', '35_39', '40_44',
                                 '45_49', '50_54', '55_59', '60_64', '65_69', '70_74', '75_79', '80_84', '85_PL'])
 
 
-# ### FONCTIONS ##############################################
-def clean_full_table(var_pertinentes):
-    df = pd.read_csv(
-        filepath_or_buffer=f'{paths["path_rmr_ar_sr_input"]}{paths["profil_rmr_ar_sr"]}',
-        usecols=var_pertinentes,
-        sep=",",
-        dtype={
-            "NOM_GÉO": "string"
-        }
-        )
-    #TODO : Extraire le QUébec seulement
-    df = df.set_axis(varlists["varlist_rename"], axis=1)
-    df.to_csv(
-        f'C:/Projets_Python/Outils_Demo/inputs/full_profile_var_pertinentes_2021.csv',
-        sep=";",
-        encoding='utf-8-sig',
-        index=False
-    )
-
+# ### FONCTIONS #################################################################################
 
 def extract_data(input_df, varlist, geo):
     """
@@ -135,11 +125,17 @@ def long_to_wide_export(input_name, export_name, pivot_vars, dtypes):
         encoding='utf-8-sig',
         index=False
     )
-
+# #############################################################
 # ### MAIN ####################################################
+# #############################################################
 
-if var_pertinentes_bool:
-    clean_full_table(varlists["varlist_full_pertinentes"])
+
+if clean_source_csv:
+    # Nettoyer le fichier source et exporter
+    cft(
+        path=f'{paths["path_rmr_ar_sr_input_folder"]}{paths["profil_rmr_ar_sr"]}',
+        dict_rename=varlists["varlist_rename"]
+    )
 
 if export_long:
     full_df = pd.read_csv(
