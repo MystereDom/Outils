@@ -35,11 +35,11 @@ varlists = {
     "list_od": [
         "mtl", "que"
     ],
-    "varlist_popagesex": [
-        "TYPE_GEO", "GEO_CODE", "MODALITE_ID", "MODALITE_NOM", "H", "F"
+    "keepvars_popagesex": [
+       "GEO_CODE", "H", "F", "AGE"
     ],
-    "varlist_taille_menage": [
-        "TYPE_GEO", "GEO_CODE", "MODALITE_ID", "MODALITE_NOM", "TOTAL"
+    "keepvars_taille_menage": [
+       "GEO_CODE", "MODALITE_NOM", "TOTAL"
     ]
 }
 # dictionnaire des no.ID des variables à extraire
@@ -81,17 +81,18 @@ LIST_AGEGROUP_NAMES = pd.Series(['00_04', '05_09', '10_14', '15_19', '20_24', '2
 
 clean_source_csv_sr = False  # Réexporter fichier profil source avec les variables pertinentes puis renommer.
 clean_source_csv_sdr = False
-export_long_sr = False  # Exporter la table renommée en format long avec sélection de types de géographie et de modalités.
+export_long_sr = False  # Exporter la table renommée en long avec sélection de types de géographie et de modalités.
 export_long_sdr = False
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ### FONCTIONS #################################################################################
 
-def pop_age_sex_geo(input_df, type_geo_renommer):
+
+def pop_age_sex_geo(input_df, keepvars):
     """
 
     :param input_df:
-    :param type_geo:
+    :param keepvars: Liste de colonnes à conserver
     :return:
     """
     # Extraire les groupes d'âge
@@ -100,30 +101,22 @@ def pop_age_sex_geo(input_df, type_geo_renommer):
         colname="MODALITE_ID",
         varvalue=id_var["age"]
     )
-    # Renommer
+    # Créer la colonne des groupes d'âge
     df['AGE'] = np.tile(
         LIST_AGEGROUP_NAMES, len(df) // len(LIST_AGEGROUP_NAMES) + 1)[:len(df)]
-    df['TYPE_GEO'] = type_geo_renommer
-    df = (
-        df
-        .drop(columns=["TYPE_GEO", "MODALITE_ID",  "MODALITE_NOM"])
-        .fillna(0)
-    )
+    # Ne gader que les colonnes pertinentes
+    df = df[keepvars].fillna(0)
     return df
 
 
-def taille_menages(input_df, type_geo_renommer):
+def taille_menages(input_df, type_geo_renommer, keepvars):
     df = ebv(
         input_df=input_df,
         colname="MODALITE_ID",
         varvalue=id_var["taille_menage"]
     )
     df['TYPE_GEO'] = type_geo_renommer
-    df = (
-        df
-        .drop(columns=["TYPE_GEO", "MODALITE_ID", "H", "F", "TAUX_TOTAL", "TAUX_H", "TAUX_F"])
-        .fillna(0)
-    )
+    df = df[keepvars].fillna(0)
     return df
 
 
@@ -134,6 +127,16 @@ def export_wide_csv(input_df, export_filename):
         encoding='utf-8-sig',
         index=False
     )
+
+
+def sm_od(df, eq_df):
+    df["OD"] = (
+        df
+        .index
+        .values
+    )
+    df["OD"] = df["OD"].map(dict(zip(eq_df.SM, eq_df.OD)))
+    return df
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ### MAIN ####################################################
@@ -147,7 +150,7 @@ if clean_source_csv_sr:
     clean_sr(
         input_path=f'{paths["path_input_folder"]}{paths["profil_rmr_ar_sr"]}',
         output_path=f'{paths["path_input_folder"]}{paths["profil_sr_qc"]}',
-        dict_champs=varlist
+        dict_rename=varlist
     )
 
 if clean_source_csv_sdr:
@@ -156,7 +159,7 @@ if clean_source_csv_sdr:
     clean_sdr(
         input_path=f'{paths["path_input_folder"]}{paths["source_profil_sdr_qc"]}',
         output_path=f'{paths["path_input_folder"]}{paths["profil_sdr_qc"]}',
-        dict_champs=varlist
+        dict_rename=varlist
     )
 
 if export_long_sr:
@@ -167,14 +170,14 @@ if export_long_sr:
             "GEO_CODE": "string"
         }
     )
-    df_popagesex_sr = pop_age_sex_geo(full_df, "SR")
+    df_popagesex_sr = pop_age_sex_geo(full_df, varlists["keepvars_popagesex"])
     df_popagesex_sr.to_csv(
         f'{dict_popagesex["input_long_sr"]}',
         sep=";",
         encoding='utf-8-sig',
         index=False
     )
-    df_taille_menage_sr = taille_menages(full_df, "SR")
+    df_taille_menage_sr = taille_menages(full_df, "SR", varlists["keepvars_taille_menage"])
     df_taille_menage_sr.to_csv(
         f'{dict_taille_menage["input_long_sr"]}',
         sep=";",
@@ -190,14 +193,14 @@ if export_long_sdr:
             "GEO_CODE": "string"
         }
     )
-    df_popagesex_sdr = pop_age_sex_geo(full_df, "SDR")
+    df_popagesex_sdr = pop_age_sex_geo(full_df, varlists["keepvars_popagesex"])
     df_popagesex_sdr.to_csv(
         f'{dict_popagesex["input_long_sdr"]}',
         sep=";",
         encoding='utf-8-sig',
         index=False
     )
-    df_taille_menage_sdr = taille_menages(full_df, "SDR")
+    df_taille_menage_sdr = taille_menages(full_df, "SDR", varlists["keepvars_taille_menage"])
     df_taille_menage_sdr.to_csv(
         f'{dict_taille_menage["input_long_sdr"]}',
         sep=";",
@@ -249,22 +252,82 @@ wide_taille_menage = (
     .concat([wide_taille_menage_sr, wide_taille_menage_sdr], axis=0)
     .set_index(keys='GEO_CODE', drop=False)
 )
+# Renommer les index
+wide_popagesexe.index.names = ['ID']
+wide_taille_menage.index.names = ['ID']
+
 
 # Importer les dictionnaires d'équivalence SR/SDR par SM
-df_final = pd.DataFrame()
+df_eq_final = pd.DataFrame()
 for od in varlists["list_od"]:
-    df = pd.read_csv(
+    df_eq_sr_sdr_sm_od = pd.read_csv(
         filepath_or_buffer=f'{paths["path_input_folder"]}{paths["eq_sr_sdr_sm"]}_{od}.csv',
         sep=",",
         dtype={"SRIDU": "string", "SDRIDU": "string"}
     )
-    if 'PROPPOPSM' not in df.columns:
-        df['PROPPOPSM'] = 1
-    df['ID'] = np.where(df['SRIDU'].isna(), df['SDRIDU'], df['SRIDU'])
-    df['OD'] = od
-    #TODO : corriger la colonne SM
-    df = df.set_index(keys='ID', drop=False)
-    df_final = pd.concat([df_final, df], axis=0)
+    if 'PROPPOPSM' not in df_eq_sr_sdr_sm_od.columns:
+        df_eq_sr_sdr_sm_od['PROPPOPSM'] = 1
+    df_eq_sr_sdr_sm_od['ID'] = np.where(
+        df_eq_sr_sdr_sm_od['SRIDU'].isna(), df_eq_sr_sdr_sm_od['SDRIDU'], df_eq_sr_sdr_sm_od['SRIDU'])
+    df_eq_sr_sdr_sm_od['OD'] = od
+    df_eq_sr_sdr_sm_od = (
+        df_eq_sr_sdr_sm_od
+        .set_index(keys='ID', drop=False)
+        .drop(columns=["SRIDU", "SDRIDU", "TYPD_COUP"])
+    )
+    df_eq_final = pd.concat([df_eq_final, df_eq_sr_sdr_sm_od], axis=0)
+df_eq_final.set_index(keys="ID")
+
+# Merger les données de population et de taille de ménage avec le dictionnaire d'équivalences SR/SDR/SM
+wide_popagesexe = df_eq_final.join(wide_popagesexe, how='left')
+wide_taille_menage = df_eq_final.join(wide_taille_menage, how='left')
+
+# Appliquer la pondération
+# 1. Créer une liste des champs auxquels on applique la pondération.
+weighted_field_list = [col for col in wide_popagesexe if col.startswith("H") or col.startswith("F")]
+weighted_fields = wide_popagesexe[weighted_field_list].apply(lambda x: round(x*wide_popagesexe['PROPPOPSM'], 0))
+wide_popagesexe[weighted_field_list] = weighted_fields
+# 2. Taille des ménages
+weighted_field_list = [col for col in wide_taille_menage if col.startswith("TOTAL")]
+weighted_fields = wide_taille_menage[weighted_field_list].apply(lambda x: round(x*wide_taille_menage['PROPPOPSM'], 0))
+wide_taille_menage[weighted_field_list] = weighted_fields
+
+# Sommer par SM
+sm_popagesex = (
+    wide_popagesexe
+    .groupby(by='SM')
+    .sum()
+    .drop(['PROPPOPSM', 'ID', 'OD', 'GEO_CODE'], axis=1)
+)
+sm_taille_menages = (
+    wide_taille_menage
+    .groupby(by='SM')
+    .sum()
+    .drop(['PROPPOPSM', 'ID', 'OD', 'GEO_CODE'], axis=1)
+)
+
+# Appliquer le champs "OD"
+# 1. Créer une table d'équivalence SM-OD
+eq_sm_od = (
+    df_eq_final[['SM', 'OD']]
+    .drop_duplicates()
+)
+# 2. Ajouter la colonne "OD"
+sm_popagesex = sm_od(sm_popagesex, eq_sm_od)
+sm_taille_menages = sm_od(sm_taille_menages, eq_sm_od)
+
+# Exporter en csv
+sm_popagesex.to_csv(
+    f'{paths["path_output_folder"]}population_par_age_sexe_SM.csv',
+    sep=";",
+    encoding='utf-8-sig',
+    index=True
+)
+sm_taille_menages.to_csv(
+    f'{paths["path_output_folder"]}taille_menages_SM.csv',
+    sep=";",
+    encoding='utf-8-sig',
+    index=True
+)
 
 pass
-
