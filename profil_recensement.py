@@ -8,8 +8,13 @@ from profil_traitement_csv import clean_sr
 from profil_traitement_csv import clean_sdr
 
 # ----------------------------------------------------------------------------------------------------------------------
-# ### PARAMS #################################################################################
+# ### PARAMS
 # dictionnaire des chemins d'accès
+params = {
+    "annee_recensement": f'2021',
+    "variables_a_extraire": ["age", "taille_menages", "nb_logements", "nb_menages"]
+}
+
 paths = {
     "path_input_folder": f'C:/Projets_Python/Outils_Demo/inputs/',
     "path_output_folder": f'C:/Projets_Python/Outils_Demo/outputs/',
@@ -45,7 +50,9 @@ varlists = {
 # dictionnaire des no.ID des variables à extraire
 id_var = {
     "age": pd.Series(list(range(10, 13)) + list(range(14, 24))+list(range(25, 30))),
-    "taille_menage": pd.Series(list(range(51, 56)))
+    "taille_menage": pd.Series(list(range(51, 56))),
+    "nb_logements": pd.Series([4]),
+    "nb_menages": pd.Series([5])
 }
 
 dict_popagesex = {
@@ -116,6 +123,26 @@ def taille_menages(input_df, type_geo_renommer, keepvars):
         varvalue=id_var["taille_menage"]
     )
     df['TYPE_GEO'] = type_geo_renommer
+    df = df[keepvars].fillna(0)
+    return df
+
+
+def nb_logements(input_df, keepvars):
+    df = ebv(
+        input_df=input_df,
+        colname="MODALITE_ID",
+        varvalue=id_var["nb_logements"]
+    )
+    df = df[keepvars].fillna(0)
+    return df
+
+
+def nb_menages(input_df, keepvars):
+    df = ebv(
+        input_df=input_df,
+        colname="MODALITE_ID",
+        varvalue=id_var["nb_menages"]
+    )
     df = df[keepvars].fillna(0)
     return df
 
