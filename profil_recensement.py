@@ -4,8 +4,6 @@ import pandas as pd
 import numpy as np
 from long_to_wide import long_to_wide as ltw
 from extract_by_value import extract_by_value as ebv
-from profil_traitement_csv import clean_sr
-from profil_traitement_csv import clean_sdr
 
 # ----------------------------------------------------------------------------------------------------------------------
 # ### PARAMS
@@ -26,17 +24,6 @@ paths = {
 }
 # dictionnaire des listes de variables
 varlists = {
-    "varlist_rename": {
-        "NIVEAU_GÉO": "TYPE_GEO",
-        "ID_CARACTÉRISTIQUE": "MODALITE_ID",
-        "NOM_CARACTÉRISTIQUE": "MODALITE_NOM",
-        "C1_CHIFFRE_TOTAL": "TOTAL",
-        "C2_CHIFFRE_HOMMES+": "H",
-        "C3_CHIFFRE_FEMMES+": "F",
-        "C10_TAUX_TOTAL": "TAUX_TOTAL",
-        "C11_TAUX_HOMMES+": "TAUX_H",
-        "C12_TAUX_FEMMES+": "TAUX_F"
-    },
     "list_od": [
         "mtl", "que"
     ],
