@@ -1,12 +1,18 @@
 # Outil pour traiter les fichiers source de profil de recensement par sr et sdr.
+# Il faut que les fichiers source soient renommés sous le format "Fichier_source_profil_YYYY_SR/SDR.csv"
+# Les fichiers de profil doivent être réexportés en UTF-8 avant d'âtre traités.
+
+# TODO : Rendu à:
+# Demander le Profil 2006 par SR
+
 import pandas as pd
+import numpy as np
 
 # ----------------------------------------------------------------------------------------------------------------------
 # PARAMS
 
-
 params = {
-    "annee": "2021",
+    "annee": "2011",
     "working_directory": f'C:/Projets_Python/Outils_Demo/',
     "input_path": f'inputs/',
     "output_path": f'outputs/',
@@ -15,17 +21,11 @@ params = {
 }
 
 # code inscrit dans le fichier de profil qui permet d'identifier l'année et le type de découpage géographique
-code_profil = {
-    "2021SDR": "X2021020",
-    "2021SR": "X2021007",
-    "2016SDR": "X2016004",
-    "2016SR": "X2016003"
-}
 
-dict_varlist_rename = {
+dict_varlist_rename_and_type = {
     "2021": {
         "SDR": {
-            "NOM_GÉO": "GEO_CODE",
+            "CODE_GÉO_ALT": "GEO_CODE",
             "NIVEAU_GÉO": "TYPE_GEO",
             "ID_CARACTÉRISTIQUE": "MODALITE_ID",
             "NOM_CARACTÉRISTIQUE": "MODALITE_NOM",
@@ -35,6 +35,12 @@ dict_varlist_rename = {
             "C10_TAUX_TOTAL": "TAUX_TOTAL",
             "C11_TAUX_HOMMES+": "TAUX_H",
             "C12_TAUX_FEMMES+": "TAUX_F"
+        },
+        "SDR_dtypes": {
+            "CODE_GÉO_ALT": "string",
+            "NIVEAU_GÉO": "category",
+            "ID_CARACTÉRISTIQUE": "int16",
+            "NOM_CARACTÉRISTIQUE": "category"
         },
         "SR": {
             "NOM_GÉO": "GEO_CODE",
@@ -47,17 +53,29 @@ dict_varlist_rename = {
             "C10_TAUX_TOTAL": "TAUX_TOTAL",
             "C11_TAUX_HOMMES+": "TAUX_H",
             "C12_TAUX_FEMMES+": "TAUX_F"
+        },
+        "SR_dtypes": {
+            "NOM_GÉO": "string",
+            "NIVEAU_GÉO": "category",
+            "ID_CARACTÉRISTIQUE": "int16",
+            "NOM_CARACTÉRISTIQUE": "category"
         }
     },
     "2016": {
         "SDR": {
-            "CODE_GÉO": "GEO_CODE",
+            "CODE_GÉO_ALT": "GEO_CODE",
             "NIVEAU_GÉO": "TYPE_GEO",
             "Membre ID: Profil des aires de diffusion (57)": "MODALITE_ID",
             "DIM: Profil des aires de diffusion (57)": "MODALITE_NOM",
             "Dim: Sexe (3): Membre ID: [1]: Total - Sexe": "TOTAL",
             "Dim: Sexe (3): Membre ID: [2]: Sexe masculin": "H",
             "Dim: Sexe (3): Membre ID: [3]: Sexe féminin": "F"
+        },
+        "SDR_dtypes": {
+            "CODE_GÉO_ALT": "string",
+            "NIVEAU_GÉO": "category",
+            "Membre ID: Profil des aires de diffusion (57)": "int16",
+            "DIM: Profil des aires de diffusion (57)": "category"
         },
         "SR": {
             "CODE_GÉO": "GEO_CODE",
@@ -67,6 +85,64 @@ dict_varlist_rename = {
             "Dim: Sexe (3): Membre ID: [1]: Total - Sexe": "TOTAL",
             "Dim: Sexe (3): Membre ID: [2]: Sexe masculin": "H",
             "Dim: Sexe (3): Membre ID: [3]: Sexe féminin": "F"
+        },
+        "SR_dtypes": {
+            "CODE_GÉO": "string",
+            "NIVEAU_GÉO": "category",
+            "Membre ID: Profil des secteurs de recensement (57)": "int16",
+            "DIM: Profil des secteurs de recensement (57)": "category"
+        }
+    },
+    "2011": {
+        "SDR": {
+            "Geo_Code": "GEO_CODE",
+            "Caractéristiques": "MODALITE_NOM",
+            "Total": "TOTAL",
+            "Sexe_masculin": "H",
+            "Sexe_féminin": "F"
+        },
+        "SDR_dtypes": {
+            "Geo_Code": "string",
+            "NIVEAU_GÉO": "category",
+            "Caractéristiques": "category"
+        },
+        "SR": {
+            "Geo_Code": "GEO_CODE",
+            "Caractéristique": "MODALITE_NOM",
+            "Total": "TOTAL",
+            "Sexe_masculin": "H",
+            "Sexe_féminin": "F"
+        },
+        "SR_dtypes": {
+            "Geo_Code": "string",
+            "NIVEAU_GÉO": "category",
+            "Caractéristiques": "category"
+        }
+    },
+    "2006": {
+        "SDR": {
+            "Geo_Code": "GEO_CODE",
+            "Caractéristiques": "MODALITE_NOM",
+            "Total": "TOTAL",
+            "Sexe_masculin": "H",
+            "Sexe_féminin": "F"
+        },
+        "SDR_dtypes": {
+            "Geo_Code": "string",
+            "NIVEAU_GÉO": "category",
+            "Caractéristiques": "category"
+        },
+        "SR": {
+            "Geo_Code": "GEO_CODE",
+            "Caractéristique": "MODALITE_NOM",
+            "Total": "TOTAL",
+            "Sexe_masculin": "H",
+            "Sexe_féminin": "F"
+        },
+        "SR_dtypes": {
+            "Geo_Code": "string",
+            "NIVEAU_GÉO": "category",
+            "Caractéristiques": "category"
         }
     }
 }
@@ -79,12 +155,13 @@ class Profil:
     def __init__(self, annee: str, sr: bool, sdr: bool, varlist_rename: dict):
         self.annee = annee
         self.varlist_rename = varlist_rename[annee]
-        self.id_modalite = id_modalites
+        self.df_dtypes_sr = varlist_rename[annee]["SR_dtypes"]
+        self.df_dtypes_sdr = varlist_rename[annee]["SDR_dtypes"]
 
         if sr:
-            self.clean_sr(f'98-401-{code_profil[(self.annee+"SR")]}_Francais_CSV_data.csv')
+            self.clean_sr(f'Fichier_source_profil_{self.annee}_SR.csv')
         if sdr:
-            self.clean_sdr(f'98-401-{code_profil[(self.annee+"SDR")]}_Francais_CSV_data.csv')
+            self.clean_sdr(f'Fichier_source_profil_{self.annee}_SDR.csv')
 
     def clean_sr(self, filename):
         """
@@ -96,10 +173,7 @@ class Profil:
             pd.read_csv(
                 f'{params["working_directory"]}{params["input_path"]}{filename}',
                 sep=",",
-                dtype={
-                    "NOM_GÉO": "string",
-                    "CODE_GÉO": "string"
-                }
+                dtype=self.df_dtypes_sr
             )
             .rename(mapper=self.varlist_rename["SR"], axis=1)
         )
@@ -116,6 +190,10 @@ class Profil:
             df[~((df['temp_ottawa'] >= 5051000) & (df['temp_ottawa'] < 5060000))]
             .drop('temp_ottawa', axis=1)
         )
+
+        if self.annee == "2011":
+            df["MODALITE_ID"] = np.tile(list(range(1, 473)), len(df) // 472 + 1)[:len(df)].astype("int32")
+
         df.to_csv(
             f'{params["working_directory"]}{params["output_path"]}profil_{self.annee}_sr_qc.csv',
             sep=";",
@@ -125,7 +203,7 @@ class Profil:
 
     def clean_sdr(self, filename):
         """
-        importe, nettoie puis exporte le fichier du profil du recsenement par SDR du Québec
+        importe, nettoie puis exporte le fichier du profil du recensement par SDR du Québec
         :param self:
         :param filename:
         :return:
@@ -135,15 +213,16 @@ class Profil:
             .read_csv(
                 f'{params["working_directory"]}{params["input_path"]}{filename}',
                 sep=",",
-                dtype={
-                    "CODE_GÉO": "string"
-                }
+                dtype=self.df_dtypes_sdr
             )
             .rename(mapper=self.varlist_rename["SDR"], axis=1)
         )
         if self.annee == "2016":
             df = df[df["GEO_CODE"].map(len) == 7]
             df = df[df["GEO_CODE"].str.startswith('24')]
+
+        if self.annee == "2011":
+            df["MODALITE_ID"] = np.tile(list(range(1, 473)), len(df) // 472 + 1)[:len(df)].astype("int32")
 
         df.to_csv(
             f'{params["working_directory"]}{params["output_path"]}profil_{self.annee}_sdr_qc.csv',
@@ -161,7 +240,7 @@ if params["annee"] == "2021":
         annee="2021",
         sr=params["SR"],
         sdr=params["SDR"],
-        varlist_rename=dict_varlist_rename,
+        varlist_rename=dict_varlist_rename_and_type,
     )
 
 if params["annee"] == "2016":
@@ -169,6 +248,14 @@ if params["annee"] == "2016":
         annee="2016",
         sr=params["SR"],
         sdr=params["SDR"],
-        varlist_rename=dict_varlist_rename,
+        varlist_rename=dict_varlist_rename_and_type,
+    )
+
+if params["annee"] == "2011":
+    profil_2011 = Profil(
+        annee="2011",
+        sr=params["SR"],
+        sdr=params["SDR"],
+        varlist_rename=dict_varlist_rename_and_type,
     )
 pass

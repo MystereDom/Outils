@@ -12,6 +12,7 @@ def import_csv(input_csv):
     :return: un df
     """
     with open(input_csv, newline="") as csvfile:
+        # Commentaires qui évitent que PyCharm détecte des erreurs qui n'existent pas (noinspection PyTypeChecker)
         # noinspection PyTypeChecker
         dialect = csv.Sniffer().sniff(csvfile.readline(), delimiters=[',', ';'])
         # noinspection PyTypeChecker
@@ -20,11 +21,36 @@ def import_csv(input_csv):
             .read_csv(
                 filepath_or_buffer=input_csv,
                 sep=dialect.delimiter,
-
                 dtype={"SR": "string"}
             )
         )
     return df
+
+# TODO : étendre à joiner plus de 2 tables
+# remplacer input1, input_2 par un **arg sous forme de liste?
+# def multi_join_tables(input_list: list, join_field, howmethod='left'):
+#     """
+#
+#     :param input_list: df, csv ou dbf
+#     :param join_field:
+#     :param howmethod:
+#     :return:
+#     """
+#
+#     df1 = input_to_df(input1)
+#     # valider que la colonne de joint existe.
+#     assert join_field in (list(df1.columns)), "Le champs de jointure n'existe pas dans la table 1"
+#     df2 = input_to_df(input2)
+#     assert join_field in (list(df2.columns)), "Le champs de jointure n'existe pas dans la table 2"
+#     df = (
+#         df1
+#         .merge(
+#             right=df2,
+#             on=join_field,
+#             how=howmethod
+#         )
+#     )
+#     return df
 
 
 def join_tables(input1, input2, join_field, howmethod='left'):
